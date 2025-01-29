@@ -6,28 +6,40 @@ const crypto = require('crypto');
 const port = process.env.PORT;
 const cron = require("node-cron");
 const env = require('dotenv').config();
+const cloudinary = require('../utils/cloudinary');
 
 
 
 // signup route
 const Signup = async (req, res) => {
     try {
-        const { userName,  password, email, } = req.body;
+        const { userName,  password, email,confirmpassword,profilePic } = req.body;
+
+        if(password!==confirmpassword){
+            return res.status(400).json({ msg: 'Passwords do not match' });
+        }
       
         const existingUser = await User.findOne({ email})
+
             if (existingUser) {
             return res.status(400).json({ msg: 'Email already exists' });  
             }
     
             const hashPassword =await bcrypt.hash(password, 10)  //10 is the Saltround for the hashing
             //i.e the number of rounds that the password can be hashed and the standard is 10-12,
+
+            const result = await cloudinary.uploader.upload(req.file.path);
+
+            console.log(result);
+            
     
     
             //create a new user document with the provided data using destructuring
-            const newUser = new User({
-                userName: userName,
-                email: email,
-                password: hashPassword
+            const User = new User({
+                userName,
+                password: hashPassword,
+                email,
+                profilePic: result.secure_url
             });
             await newUser.save();
 
@@ -55,18 +67,15 @@ const Signup = async (req, res) => {
                     //write a function to send a scheduled message (every 5 min)
                     // Use Cron to schedule
                 } else {
-                    console.log(`Email sent: ${mailOptions.to}`);
-
-                     //respond with a success message
-            return res.status(200).json({message: "User saved successfully"});
+                    console.log("Email sent:", info.response);
                 }
             });
-    
-        } catch (error) {
-            //log any errors that occur during the process
-            console.log(error);
-    
-            //respond with 500 status and an error message
+
+                     //respond with a success message
+            return res.status(200).json({message: "User saved successfully and you will recieve a mail", user});
+                } catch (error) {
+                    console.log(error);
+                    
             return res.status(500).json({message:"internal server error"})
             
         }
@@ -78,8 +87,9 @@ const Login = async (req, res) => {
         const {email,password} =req.body;
         
         const user = await User.findOne({email:email});
+
         if(!user) {
-            return res.status(400).json({msg:'invalid email credentials'})
+            return res.status(400).json({msg:'User not found'})
         }
         
         const isMatch =await bcrypt.compare(password,user.password)
@@ -94,20 +104,13 @@ const Login = async (req, res) => {
         }
 
         const token = jwt.sign(payload, process.env.JWT_SECRET, {expiresIn: '1h'});
-        
-        const dataInfo = {
-            email: user.email,
-            password: user.password,
-            token: token
-        } 
-        return res.status (200).json({msg:'Logged in successfully', dataInfo})
-        
-    }catch (error) {
-        console.log(error);
-        
-            return res.status(500).json({msg:'Internal server error'})
-        }
+
+        return res.status(200).json({msg:'User logged in successfully', token: token});
+    } catch (error) {
+        return res.status(500).json({msg:'Internal server error'})
     }
+}
+    
 
     const AllUsers = async (req, res) => {
         try {
@@ -201,7 +204,51 @@ const Login = async (req, res) => {
             return res.status(500).json({ message: 'internal server error' });
     }
 }
-    
+
+// const transporter = nodemailer.createTransport({
+//     service: 'gmail',
+//     auth: {
+//         user: process.env.MAIL,
+//         pass: process.env.MAIL_PASS,
+//     },
+// });
+
+// //FUNCTION TO SEND EMAIL TO ALL USERS IN THE DATABASE
+// const sendmail = async () => {
+//     try {
+//         // fetch all users from the database
+//         const users = await User.find();
+
+//         // loop through the users array
+//         if (users.length === 0) {
+//             console.log('No recipients found');
+//             return;
+//         }
+
+//         //loop through users and send emailto each 
+//         for (const user of users) {
+//             const mailOptions = {
+//                 from: process.env.MAIL,
+//                 to: user.email,
+//                 subject: 'Hello from MVC Architecture',
+//                 text: `Welcome ${user.userName} to our platform`,
+//             };
+
+//             await transporter.sendmail(mailOptions);
+//             console.log(`Email sent to ${user.email}`);
+//     }
+//     } catch (error) {
+//         console.error('error sending email', error);
+//     }
+// };
+
+// //Schedule the cron job to run at 12pm daily
+//     cron.schedule('0 0 12 * * *', () => {
+//         console.log('Running Cron Job - Sending daily email');
+//         sendmail();
+//     });
+
+//export the routes
     module.exports = {Signup, Login, AllUsers, forgotPassword, resetPassword};
 
 
@@ -233,28 +280,28 @@ const Login = async (req, res) => {
   
 
 // Function to send a scheduled email
-function sendScheduledMessage() {
-  const mailOptions = {
-    from: process.env.MAIL, // Replace with your email
-    to: user.email, // Replace with recipient's email
-    subject: "Scheduled Message",
-    text: "Hello! This is your scheduled message sent every 5 minutes.",
-  };
+// function sendScheduledMessage() {
+//   const mailOptions = {
+//     from: process.env.MAIL, // Replace with your email
+//     to: user.email, // Replace with recipient's email
+//     subject: "Scheduled Message",
+//     text: "Hello! This is your scheduled message sent every 5 minutes.",
+//   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error("Error sending email:", error);
-    } else {
-      console.log("Email sent successfully:", info.response);
-    }
-  });
-}
+//   transporter.sendMail(mailOptions, (error, info) => {
+//     if (error) {
+//       console.error("Error sending email:", error);
+//     } else {
+//       console.log("Email sent successfully:", info.response);
+//     }
+//   });
+// }
 
-// Schedule the function to run every 5 minutes
-cron.schedule("*/1 * * * *", () => {
-  sendScheduledMessage();
-  console.log("Scheduled email sent at:", new Date().toLocaleString());
-});
+// // Schedule the function to run every 5 minutes
+// cron.schedule("*/1 * * * *", () => {
+//   sendScheduledMessage();
+//   console.log("Scheduled email sent at:", new Date().toLocaleString());
+// });
 
-// Start the script
-console.log("Cron job initialized to send an email every 1 minutes.");
+// // Start the script
+// console.log("Cron job initialized to send an email every 1 minutes.");

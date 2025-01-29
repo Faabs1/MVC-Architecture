@@ -58,3 +58,43 @@ server.listen(port, () => {
 })
 
 // creating seeding data
+// async function seedData() {
+// 	try {
+// 		for (let i = 0; i <400; i++) {
+// 			const password = `password:${i}`
+
+// 			const hash = await bcrypt.hash(password, 10);
+
+// 			const user = new User({
+// 				userName: `Student ${i}`,
+//                 password: hash,
+//                 email: `user${i}@example.com`,,
+// 			});
+// 			console.log(`seeding in progress ${user}`);
+
+// 			await user.save();
+// 		}
+// 		console.log('Data seeded successfully');
+// 	} catch (error) {
+// 		console.error('error seeding data', error.message);
+// 	}
+// }
+
+// seedData();
+
+
+//     OR
+
+// Function to send a scheduled email
+			// const user = new User({
+			// 	userName: faker.internet.userName(),
+			// 	password: faker.internet.password(),
+			// 	email: faker.internet.email(),
+			// 	profilePic: faker.image.imageUrl(),
+			// 	role: 'user'
+			// });
+			// await user.save();
+// 		}
+// 	}
+// }
+// seedData();
