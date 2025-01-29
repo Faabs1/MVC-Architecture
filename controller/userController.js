@@ -35,7 +35,7 @@ const Signup = async (req, res) => {
     
     
             //create a new user document with the provided data using destructuring
-            const User = new User({
+            const newUser = new User({
                 userName,
                 password: hashPassword,
                 email,
@@ -72,7 +72,7 @@ const Signup = async (req, res) => {
             });
 
                      //respond with a success message
-            return res.status(200).json({message: "User saved successfully and you will recieve a mail", user});
+            return res.status(200).json({message: "User saved successfully and you will recieve a mail", newUser});
                 } catch (error) {
                     console.log(error);
                     
